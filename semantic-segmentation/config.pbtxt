@@ -1,0 +1,83 @@
+name: "semantic-segmentation"
+platform: "ensemble"
+max_batch_size: 8
+input [
+  {
+    name: "input"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+output [
+  {
+    name: "rles"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  },
+  {
+    name: "categories"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  } 
+]
+ensemble_scheduling {
+  step [
+    {
+      model_name: "pre"
+      model_version: 1
+      input_map {
+        key: "input"
+        value: "input"
+      }
+      output_map {
+        key: "image"
+        value: "preprocessed_image"
+      }
+      output_map {
+        key: "scale"
+        value: "scale"
+      }
+      output_map {
+        key: "pad"
+        value: "pad"
+      }            
+    },
+    {
+      model_name: "semantic-segmentation-infer"
+      model_version: 1
+      input_map {
+        key: "input"
+        value: "preprocessed_image"
+      }
+      output_map {
+        key: "output"
+        value: "pred_masks"
+      }
+    },    
+    {
+      model_name: "post"
+      model_version: 1
+      input_map {
+        key: "scale"
+        value: "scale"
+      }     
+      input_map {
+        key: "pad"
+        value: "pad"
+      }            
+      input_map {
+        key: "masks"
+        value: "pred_masks"
+      }
+      output_map {
+        key: "rles"
+        value: "rles"
+      }      
+      output_map {
+        key: "categories"
+        value: "categories"
+      }
+    }
+  ]
+}
+version_policy: { all { }}
