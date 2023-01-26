@@ -6,6 +6,8 @@ import torch
 
 from typing import List
 
+import labels as CSLabels
+
 from triton_python_backend_utils import Tensor, InferenceResponse, \
     get_input_tensor_by_name, InferenceRequest, get_input_config_by_name, \
     get_output_config_by_name, triton_string_to_numpy
@@ -23,18 +25,10 @@ def rle_encode(im_arr):
 
 
 def post_process(mask, scale, pad):
-    print("--------<><<<<<< scale", scale)
-    print("--------<><<<<<< pad", pad)
-    print("-------->>>>>>> mask ", mask.shape)
     mask = np.array(mask[0])
-    print("-------->>>>>>> mask11111 ", mask.shape)
     h, w = mask.shape[:2]
-    print("-------->>>>>>> h, w ", h, w)
-    print(" sasasassasass ", pad[1], h-pad[1], pad[0], w-pad[0])
     mask = mask[int(pad[1]):int(h-pad[1]), int(pad[0]):int(w-pad[0])]
-    print("-------->>>>>>> mask pad off ",mask.shape)
     org_size = (int((w-2*pad[0])/scale[0]), int((h-2*pad[1])/scale[1]))
-    print("------->>> org_size ", org_size)
     rles = []
     categories = []
     for i in range(30): # cityscape data has 30 classes
@@ -43,17 +37,14 @@ def post_process(mask, scale, pad):
         
         if sum(sum(img_out)) == 0:
             continue
-        cv2.imwrite(f"{i}.jpg", img_out)
-        print("----->img_out ", i, img_out)
         img_out = np.array(cv2.resize(img_out, org_size, interpolation = cv2.INTER_AREA))
         img_out_bin = np.zeros(img_out.shape)
         img_out_bin[img_out>0] = 1
-        cv2.imwrite(f"{i}_resize.jpg", img_out_bin*255)
         rle = rle_encode(img_out_bin)
         rle = [str(i) for i in rle]
         rle = ",".join(rle)
         rles.append(rle)
-        categories.append(str(i+1))
+        categories.append(CSLabels.id2label[i].name)
     return rles, categories
 
 
@@ -148,7 +139,6 @@ class TritonPythonModel(object):
 
             batch_out['rles'] = rs_rles
             batch_out['categories'] = rs_categories
-
             # Format outputs to build an InferenceResponse
             output_tensors = [Tensor(self.output_names[k], np.asarray(
                 out, dtype=self.output_dtypes[k])) for k, out in batch_out.items()]
