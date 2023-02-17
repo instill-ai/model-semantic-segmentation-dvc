@@ -42,15 +42,16 @@ def preprocess(img, new_shape=(640, 640), color=(114, 114, 114), auto=False, sca
     top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
     left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
     img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
-    
-        # HWC -> CHW
+
+    # HWC -> CHW
     img = np.transpose(img, [2, 0, 1])
 
     # Normalize
-    mean_vec = np.array([102.9801, 115.9465, 122.7717])
+    mean_vec = np.array([123.675, 116.28, 103.53])
+    std_vec = np.array([58.395, 57.12, 57.375])
     for i in range(img.shape[0]):
-        img[i, :, :] = img[i, :, :] - mean_vec[i]
-        
+        img[i, :, :] = (img[i, :, :] - mean_vec[i])/std_vec[i]
+
     return img, ratio, (dw, dh)
 
 
